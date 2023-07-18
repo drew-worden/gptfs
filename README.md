@@ -8,3 +8,5 @@ Below are a list of models, tools, and architectures present within the project.
 	- Scalar values autograd engine
 	- Uses topological sort
 	- PyTorch inspired API
+2. Neural Network Library
+	- Multi Layer Perceptron
