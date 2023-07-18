@@ -39,4 +39,4 @@ def draw_graph(root_node):
     for node1, node2 in edges:
         graph.edge(str(id(node1)), str(id(node2)) + node2.operation)
 
-    graph.render(directory="./automatic-gradient-engine/generated")
+    graph.render(directory=".")
