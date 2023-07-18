@@ -1,11 +1,7 @@
 # IMPORTS
 import math
-import numpy as np
-import matplotlib.pyplot as plt
-from graphviz import Digraph
 
-
-# LOWEST LEVEL DATA STRUCTURE
+#NODE DATA STRUCTURE
 class Node:
     def __init__(self, data, children=(), operation="", label=""):
         self.data = data
@@ -19,7 +15,8 @@ class Node:
         return f"Value(data = {self.data}, operation = {self.operation}, label = {self.label})"
 
     def __add__(self, other):
-        output =  Node(self.data + other.data, (self, other), "+")
+        other = other if isinstance(other, Node) else Node(other)
+        output = Node(self.data + other.data, (self, other), "+")
 
         def backward():
             self.gradient += 1 * output.gradient
@@ -27,8 +24,15 @@ class Node:
 
         output.backward = backward
         return output
+    
+    def __radd__(self, other):
+        return self * other
+    
+    def __sub__(self, other):
+        return self + (-other)
 
     def __mul__(self, other):
+        other = other if isinstance(other, Node) else Node(other)
         output = Node(self.data * other.data, (self, other), "*")
 
         def backward():
@@ -37,18 +41,47 @@ class Node:
 
         output.backward = backward
         return output
-
-    def tanh(self):
-        x = self.data
-        tanh = (math.exp(2*x) - 1)/(math.exp(2*x) + 1)
-        output = Node(tanh, (self, ), "tanh")
+    
+    def __rmul__(self, other):
+        return self * other
+    
+    def __truediv__(self, other):
+        return self * other ** -1
+    
+    def __pow__(self, other):
+        assert isinstance(other, (int, float))
+        output = Node(self.data ** other, (self, ), f"^{other}")
 
         def backward():
-            self.gradient += (1 - tanh **2) * output.gradient
+            self.gradient += other * (self.data ** (other - 1)) * output.gradient
 
         output.backward = backward
         return output
     
+    def __neg__(self):
+        return self * -1
+
+    def exp(self):
+        x = self.data
+        output = Node(math.exp(x), (self, ), "exp")
+
+        def backward():
+            self.gradient = output.data * output.gradient
+
+        output.backward = backward
+        return output
+
+    def tanh(self):
+        x = self.data
+        tanh = (math.exp(2 * x) - 1) / (math.exp(2 * x) + 1)
+        output = Node(tanh, (self,), "tanh")
+
+        def backward():
+            self.gradient += (1 - tanh**2) * output.gradient
+
+        output.backward = backward
+        return output
+
     def backward_propagation(self):
         topological_list = []
         visited = set()
@@ -59,49 +92,10 @@ class Node:
                 for child in node.children:
                     topological_sort(child)
                 topological_list.append(node)
-            
+
         topological_sort(self)
 
         self.gradient = 1
 
         for node in reversed(topological_list):
             node.backward()
-
-# RECURSIVELY TRACE GRAPH OF NODES
-def trace_graph(root_node):
-    nodes = set()
-    edges = set()
-
-    def recursive_build(node):
-        if node not in nodes:
-            nodes.add(node)
-            for child in node.children:
-                edges.add((child, node))
-                recursive_build(child)
-
-    recursive_build(root_node)
-
-    return nodes, edges
-
-
-# DRAW GRAPH
-def draw_graph(root_node):
-    graph = Digraph(format="png", graph_attr={"rankdir": "LR"})
-
-    nodes, edges = trace_graph(root_node)
-
-    for node in nodes:
-        uid = str(id(node))
-        graph.node(
-            name=uid, label="{%s | w = %.4f | g = %.4f}" % (node.label, node.data, node.gradient), shape="record"
-        )
-        if node.operation:
-            graph.node(name=uid + node.operation, label=node.operation)
-            graph.edge(uid + node.operation, uid)
-
-    for node1, node2 in edges:
-        graph.edge(str(id(node1)), str(id(node2)) + node2.operation)
-
-    graph.render(directory="./automatic-gradient-engine")
-
-

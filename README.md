@@ -7,3 +7,4 @@ Below are a list of models, tools, and architectures present within the project.
 1. Automatic Gradient Engine
 	- Scalar values autograd engine
 	- Uses topological sort
+	- PyTorch inspired API
